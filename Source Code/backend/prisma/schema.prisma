@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
+}
+
+model Document {
+  id            Int              @id @default(autoincrement())
+  filename      String
+  uploaded_at   DateTime         @default(now())
+  clauses_count Int?              // total identified clauses
+  categories    String[]         // PostgreSQL text[] to store multiple categories
+  confidence    Float?            // overall confidence score
+  status        String?           // e.g. "completed", "processing"
+  overallRisk   String?           // e.g., "Low", "Medium", "High"
+  riskScore     Float?            // average score 0–100
+  riskDetails   Json?             // array of per-clause risk results
+
+  // Relations
+  chunks        DocumentChunk[]
+  complianceChecks ComplianceCheck[]   // NEW → link compliance reports
+}
+
+model DocumentChunk {
+  id           Int       @id @default(autoincrement())
+  document     Document  @relation(fields: [documentId], references: [id])
+  documentId   Int
+  content      String
+  embedding    Unsupported("vector")
+  created_at   DateTime  @default(now())
+}
+
+model ComplianceCheck {
+  id           Int       @id @default(autoincrement())
+  document     Document  @relation(fields: [documentId], references: [id])
+  documentId   Int
+  framework    String    // e.g., GDPR, HIPAA, SOX
+  score        Int       // compliance score (0-100)
+  requirements Int       // total requirements checked
+  passed       Int       // how many passed
+  issues       Int       // how many failed
+  details      Json      // full structured report (per requirement)
+  createdAt    DateTime  @default(now())
+}
